@@ -32,19 +32,22 @@ import { deleteMessageAction, deleteThreadAction, getThreadMessagesAction, sendC
 interface Message {
   id: string;
   thread_id: string;
-  sender_id: string;
+  sender_id: string | null;
   message: string;
   created_at: string;
   sender?: {
     first_name: string;
     last_name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface Thread {
   id: string;
-  parent_id: string;
+  parent_id: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
   room_id: string | null;
   subject: string;
   created_at: string;
@@ -55,7 +58,16 @@ interface Thread {
       last_name: string;
       email: string;
       phone?: string;
-    };
+    } | null;
+  } | null;
+}
+
+function getContactDetails(thread: Thread) {
+  const profile = thread.parents?.profiles;
+  return {
+    name: thread.guest_name ?? (`${profile?.first_name || ""} ${profile?.last_name || ""}`.trim() || "Parent"),
+    email: thread.guest_email ?? profile?.email,
+    phone: thread.guest_phone ?? profile?.phone,
   };
 }
 
@@ -92,9 +104,8 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
     const q = searchQuery.toLowerCase();
     return threads.filter((t) => {
       const subjectMatch = (t.subject || "").toLowerCase().includes(q);
-      const parentName = `${t.parents?.profiles?.first_name || ""} ${t.parents?.profiles?.last_name || ""}`.toLowerCase();
-      const parentEmail = (t.parents?.profiles?.email || "").toLowerCase();
-      return subjectMatch || parentName.includes(q) || parentEmail.includes(q);
+      const { name, email } = getContactDetails(t);
+      return subjectMatch || name.toLowerCase().includes(q) || Boolean(email?.toLowerCase().includes(q));
     });
   }, [threads, searchQuery]);
 
@@ -338,12 +349,10 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
         ) : (
           filteredThreads.map((t) => {
             const isExpanded = expandedId === t.id;
-            const parentProfile = t.parents?.profiles;
-            const parentName = isStaff
-              ? `${parentProfile?.first_name || ""} ${parentProfile?.last_name || ""}`.trim() || "Parent"
-              : "Nursery Office";
-            const parentEmail = parentProfile?.email;
-            const parentPhone = parentProfile?.phone;
+            const contact = getContactDetails(t);
+            const parentName = isStaff ? contact.name : "Nursery Office";
+            const parentEmail = contact.email;
+            const parentPhone = t.parent_id ? contact.phone : contact.phone?.replace(/[^+0-9]/g, "");
 
             const threadMsgs = messagesMap[t.id] || [];
             const isLoading = loadingMap[t.id];
@@ -424,7 +433,7 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
                         <div className="flex items-center gap-2 flex-wrap">
                           {parentEmail && (
                             <a
-                              href={`mailto:${parentEmail}`}
+                              href={`mailto:${encodeURIComponent(parentEmail).replace("%40", "@")}`}
                               className="inline-flex items-center gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors"
                             >
                               <Mail className="h-3.5 w-3.5" /> Email
@@ -463,9 +472,8 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
                       ) : (
                         threadMsgs.map((msg) => {
                           const isOwnMessage = msg.sender_id === currentUserProfile?.id;
-                          const senderLabel = isOwnMessage
-                            ? "Me"
-                            : `${msg.sender?.first_name || ""} ${msg.sender?.last_name || ""}`.trim() || "Sender";
+                          const senderName = `${msg.sender?.first_name || ""} ${msg.sender?.last_name || ""}`.trim();
+                          const senderLabel = isOwnMessage ? "Me" : senderName || t.guest_name || "Sender";
 
                           return (
                             <div
@@ -508,20 +516,22 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
 
                     {/* Reply Bar & Delete Conversation Footer */}
                     <div className="pt-3 border-t flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                      <form
-                        onSubmit={(e) => handleSendReply(t.id, e)}
-                        className="flex-1 flex gap-2"
-                      >
-                        <Input
-                          placeholder={isStaff ? "Type reply to parent..." : "Type reply..."}
-                          value={replyTextMap[t.id] || ""}
-                          onChange={(e) => setReplyTextMap((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                          className="rounded-xl text-xs flex-1"
-                        />
-                        <Button type="submit" size="sm" className="rounded-xl font-bold gap-1 shrink-0">
-                          <Send className="h-3.5 w-3.5" /> Reply
-                        </Button>
-                      </form>
+                      {t.parent_id && (
+                        <form
+                          onSubmit={(e) => handleSendReply(t.id, e)}
+                          className="flex-1 flex gap-2"
+                        >
+                          <Input
+                            placeholder={isStaff ? "Type reply to parent..." : "Type reply..."}
+                            value={replyTextMap[t.id] || ""}
+                            onChange={(e) => setReplyTextMap((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                            className="rounded-xl text-xs flex-1"
+                          />
+                          <Button type="submit" size="sm" className="rounded-xl font-bold gap-1 shrink-0">
+                            <Send className="h-3.5 w-3.5" /> Reply
+                          </Button>
+                        </form>
+                      )}
 
                       {isStaff && (
                         <Button
