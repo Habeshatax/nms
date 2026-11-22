@@ -160,8 +160,8 @@ export function NurseryFooter() {
                 </span>
                 <span className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground font-medium">
                   <Mail className="h-4 w-4 text-orange-500 shrink-0" />
-                  <a href="mailto:info@bubblydnursery.co.uk" className="font-bold text-orange-600 hover:underline">
-                    info@bubblydnursery.co.uk
+                  <a href="mailto:bubblydnursery@gmail.com" className="font-bold text-orange-600 hover:underline">
+                    bubblydnursery@gmail.com
                   </a>
                 </span>
               </div>

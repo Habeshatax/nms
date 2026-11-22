@@ -115,14 +115,8 @@ export default function ContactPage() {
                       </div>
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-bold block uppercase tracking-wider text-[10px]">
-                          Email addresses
+                          Email address
                         </span>
-                        <a
-                          href="mailto:info@bubblydnursery.co.uk"
-                          className="block font-bold text-orange-600 hover:underline break-all"
-                        >
-                          info@bubblydnursery.co.uk
-                        </a>
                         <a
                           href="mailto:bubblydnursery@gmail.com"
                           className="block font-bold text-orange-600 hover:underline break-all"
@@ -181,14 +175,8 @@ export default function ContactPage() {
 
                     <div className="border-t border-teal-100 pt-4 text-xs space-y-1">
                       <span className="text-muted-foreground font-bold block uppercase tracking-wider text-[10px]">
-                        Email addresses
+                        Email address
                       </span>
-                      <a
-                        href="mailto:info@bubblydnursery.co.uk"
-                        className="block font-bold text-teal-600 hover:underline break-all"
-                      >
-                        info@bubblydnursery.co.uk
-                      </a>
                       <a
                         href="mailto:bubblyd2nursery@gmail.com"
                         className="block font-bold text-teal-600 hover:underline break-all"
