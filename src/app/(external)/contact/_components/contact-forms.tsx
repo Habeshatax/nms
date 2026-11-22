@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Calendar, MessageSquare, Sparkles } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldContent, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -15,52 +14,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 
 import { submitContactFormAction } from "../actions";
-
-// ==========================================
-// SCHEMAS & TYPES
-// ==========================================
-
-const enquirySchema = z.object({
-  name: z.string().min(2, { message: "Name is required." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  phone: z.string().min(5, { message: "Phone number is required." }),
-  message: z.string().min(10, { message: "Message must be at least 10 characters." }),
-});
-
-type EnquiryFormValues = z.infer<typeof enquirySchema>;
-
-const tourSchema = z.object({
-  parentName: z.string().min(2, { message: "Parent name is required." }),
-  email: z.string().email({ message: "Please enter a valid email address." }),
-  phone: z.string().min(5, { message: "Phone number is required." }),
-  classroom: z.string().min(1, { message: "Please select a classroom." }),
-  visitDate: z.string().refine(
-    (val) => {
-      const selectedDate = new Date(val);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      // Check if in the past
-      if (selectedDate < today) return false;
-
-      // Check if weekend (0 = Sunday, 6 = Saturday)
-      const day = selectedDate.getDay();
-      return day !== 0 && day !== 6;
-    },
-    {
-      message: "Tours can only be scheduled for future weekdays (Monday - Friday).",
-    },
-  ),
-  timeSlot: z.string().min(1, { message: "Please select a time slot." }),
-  childAge: z.string().min(1, { message: "Please specify child age / age range." }),
-  branch: z.string().min(1, { message: "Please select a branch location." }),
-});
-
-type TourFormValues = z.infer<typeof tourSchema>;
-
-// ==========================================
-// MAIN COMPONENT
-// ==========================================
+import { enquirySchema, type EnquiryFormValues, tourSchema, type TourFormValues } from "../form-schemas";
 
 export function ContactForms() {
   const [activeForm, setActiveForm] = React.useState<"enquiry" | "tour">("enquiry");
@@ -95,19 +49,17 @@ export function ContactForms() {
   const onEnquirySubmit = async (data: EnquiryFormValues) => {
     setSubmitting(true);
     try {
-      await submitContactFormAction({
-        type: "ENQUIRY",
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        message: data.message,
-      });
+      const result = await submitContactFormAction({ type: "ENQUIRY", ...data });
+      if (!result.success) {
+        toast.error("Error sending enquiry", { description: result.message });
+        return;
+      }
       toast.success("Enquiry Sent!", {
         description: `Thank you, ${data.name}. Our admissions office will review your enquiry in our messages portal and email you shortly at ${data.email}.`,
       });
       enquiryForm.reset();
-    } catch (err: any) {
-      toast.error("Error sending enquiry", { description: err.message || "Please try again." });
+    } catch {
+      toast.error("Error sending enquiry", { description: "Please try again." });
     } finally {
       setSubmitting(false);
     }
@@ -116,23 +68,17 @@ export function ContactForms() {
   const onTourSubmit = async (data: TourFormValues) => {
     setSubmitting(true);
     try {
-      await submitContactFormAction({
-        type: "TOUR",
-        name: data.parentName,
-        email: data.email,
-        phone: data.phone,
-        classroom: data.classroom,
-        visitDate: data.visitDate,
-        timeSlot: data.timeSlot,
-        childAge: data.childAge,
-        branch: data.branch,
-      });
+      const result = await submitContactFormAction({ type: "TOUR", ...data });
+      if (!result.success) {
+        toast.error("Error booking tour", { description: result.message });
+        return;
+      }
       toast.success("Tour Visit Requested!", {
         description: `Your booking request for ${data.visitDate} at ${data.timeSlot} has been sent! Nursery managers will confirm via phone or message shortly.`,
       });
       tourForm.reset();
-    } catch (err: any) {
-      toast.error("Error booking tour", { description: err.message || "Please try again." });
+    } catch {
+      toast.error("Error booking tour", { description: "Please try again." });
     } finally {
       setSubmitting(false);
     }
