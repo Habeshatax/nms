@@ -13,8 +13,12 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
+
+export const metadata = publicPageMetadata("/curriculum");
 
 export default function CurriculumPage() {
   const primeAreas = [

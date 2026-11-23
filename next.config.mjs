@@ -30,6 +30,12 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.bubblydnursery.co.uk" }],
+        destination: "https://bubblydnursery.co.uk/:path*",
+        permanent: true,
+      },
+      {
         source: "/dashboard",
         destination: "/dashboard/default",
         permanent: false,

@@ -2,8 +2,12 @@ import { BookOpen, FileText, Gift, HelpCircle, Info } from "lucide-react";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
+
+export const metadata = publicPageMetadata("/parent-info");
 
 export default function ParentInfoPage() {
   const fees = [

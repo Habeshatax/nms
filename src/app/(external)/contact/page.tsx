@@ -2,9 +2,13 @@ import { ExternalLink, MapPin, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
 import { ContactForms } from "./_components/contact-forms";
+
+export const metadata = publicPageMetadata("/contact");
 
 export default function ContactPage() {
   return (

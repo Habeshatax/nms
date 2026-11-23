@@ -4,9 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
 import { ApplicationForm } from "./_components/application-form";
+
+export const metadata = publicPageMetadata("/careers");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

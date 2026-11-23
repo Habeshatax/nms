@@ -53,8 +53,8 @@ export function Hero() {
 
             {/* Subtitle */}
             <p className="mt-6 text-lg sm:text-xl lg:text-2xl text-sky-100 font-medium leading-relaxed max-w-2xl drop-shadow">
-              Ofsted-registered Early Years nursery in London. Providing warm, stimulating, and child-centric childcare for
-              babies, toddlers, and preschool children.
+              Ofsted-registered day nursery in Bermondsey, London SE16, with settings on Galleywall Road and Corbetts Lane.
+              Warm, stimulating childcare for babies, toddlers and preschool children aged 3 months to 5 years.
             </p>
 
             {/* Action Buttons */}

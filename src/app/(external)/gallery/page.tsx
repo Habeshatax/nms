@@ -2,9 +2,13 @@ import { Image as ImageIcon, Sparkles } from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
 import { GalleryFilterList } from "./_components/gallery-filter-list";
+
+export const metadata = publicPageMetadata("/gallery");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

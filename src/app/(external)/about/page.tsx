@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
 import { AboutHero } from "./_components/about-hero";
@@ -7,6 +9,8 @@ import { Philosophy } from "./_components/philosophy";
 import { Safeguarding } from "./_components/safeguarding";
 import { Team } from "./_components/team";
 import { Vision } from "./_components/vision";
+
+export const metadata = publicPageMetadata("/about");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
