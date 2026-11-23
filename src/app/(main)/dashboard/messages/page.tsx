@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { tourManagementEnabled } from "@/lib/tours/email-dispatch";
 
 import { ChatWorkspace } from "./_components/chat-workspace";
 
@@ -94,6 +95,12 @@ export default async function MessagesPage() {
   }
 
   return (
-    <ChatWorkspace initialThreads={threads} currentUserProfile={profile} isStaff={isStaff} parentRecordId={parentId} />
+    <ChatWorkspace
+      initialThreads={threads}
+      currentUserProfile={profile}
+      isStaff={isStaff}
+      parentRecordId={parentId}
+      tourManagementEnabled={tourManagementEnabled()}
+    />
   );
 }

@@ -23,11 +23,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/lib/supabase/client";
+import { tourStatuses, tourStatusLabels, type TourThread } from "@/lib/tours/schema";
 
 import { deleteMessageAction, deleteThreadAction, getThreadMessagesAction, sendChatMessageAction } from "../actions";
+import { TourManager } from "./tour-manager";
 
 interface Message {
   id: string;
@@ -42,7 +45,7 @@ interface Message {
   } | null;
 }
 
-interface Thread {
+interface Thread extends TourThread {
   id: string;
   parent_id: string | null;
   guest_name: string | null;
@@ -76,9 +79,10 @@ interface ChatWorkspaceProps {
   currentUserProfile: any;
   isStaff: boolean;
   parentRecordId: string | null;
+  tourManagementEnabled?: boolean;
 }
 
-export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, parentRecordId }: ChatWorkspaceProps) {
+export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, parentRecordId, tourManagementEnabled = false }: ChatWorkspaceProps) {
   const supabase = createClient();
   const router = useRouter();
 
@@ -92,6 +96,7 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
   const [replyTextMap, setReplyTextMap] = React.useState<Record<string, string>>({});
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [tourFilter, setTourFilter] = React.useState("ALL");
 
   // New thread form states
   const [newThreadSubject, setNewThreadSubject] = React.useState("");
@@ -100,14 +105,16 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
 
   // Filtered threads
   const filteredThreads = React.useMemo(() => {
-    if (!searchQuery.trim()) return threads;
-    const q = searchQuery.toLowerCase();
-    return threads.filter((t) => {
-      const subjectMatch = (t.subject || "").toLowerCase().includes(q);
-      const { name, email } = getContactDetails(t);
-      return subjectMatch || name.toLowerCase().includes(q) || Boolean(email?.toLowerCase().includes(q));
+    const q = searchQuery.trim().toLowerCase();
+    return threads.filter((thread) => {
+      const { name, email } = getContactDetails(thread);
+      const matchesText = thread.subject.toLowerCase().includes(q) || name.toLowerCase().includes(q)
+        || Boolean(email?.toLowerCase().includes(q));
+      const matchesStatus = tourFilter === "ALL" || (tourFilter === "TOURS" && Boolean(thread.tour_status))
+        || thread.tour_status === tourFilter;
+      return matchesText && matchesStatus;
     });
-  }, [threads, searchQuery]);
+  }, [threads, searchQuery, tourFilter]);
 
   // Fetch thread messages helper
   const loadThreadMessages = React.useCallback(async (threadId: string) => {
@@ -338,6 +345,19 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
         />
       </div>
 
+      {isStaff && tourManagementEnabled && (
+        <div className="flex flex-col gap-2">
+          <label htmlFor="tour-filter" className="text-sm font-medium">Filter messages</label>
+          <NativeSelect id="tour-filter" value={tourFilter} onChange={(event) => setTourFilter(event.target.value)}>
+            <NativeSelectOption value="ALL">All messages</NativeSelectOption>
+            <NativeSelectOption value="TOURS">All tours</NativeSelectOption>
+            {tourStatuses.map((status) => <NativeSelectOption key={status} value={status}>
+              {tourStatusLabels[status]}
+            </NativeSelectOption>)}
+          </NativeSelect>
+        </div>
+      )}
+
       {/* Accordion List of Messages (1 Horizontal Line per Card) */}
       <div className="space-y-3">
         {filteredThreads.length === 0 ? (
@@ -387,8 +407,8 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
                       </div>
 
                       <div className="md:col-span-8 min-w-0 flex items-center gap-2">
-                        <Badge variant="outline" className="text-[10px] font-bold shrink-0 hidden sm:inline-flex">
-                          Enquiry
+                        <Badge variant="outline" className="text-[10px] font-bold shrink-0">
+                          {tourManagementEnabled && t.tour_status ? `Tour - ${tourStatusLabels[t.tour_status]}` : "Enquiry"}
                         </Badge>
                         <span className="font-medium text-xs text-foreground/90 truncate">{t.subject}</span>
                       </div>
@@ -457,6 +477,16 @@ export function ChatWorkspace({ initialThreads, currentUserProfile, isStaff, par
                           )}
                         </div>
                       </div>
+                    )}
+
+                    {isStaff && tourManagementEnabled && t.tour_status && !isLoading && messagesMap[t.id] && (
+                      <TourManager key={`${t.id}-${t.tour_revision ?? 0}`} thread={t}
+                        messageText={threadMsgs.map((message) => message.message).join("\n")}
+                        onUpdated={(updated) => {
+                          setThreads((current) => current.map((thread) => thread.id === updated.id
+                            ? { ...thread, ...updated } : thread));
+                          loadThreadMessages(t.id);
+                        }} />
                     )}
 
                     {/* Messages List */}

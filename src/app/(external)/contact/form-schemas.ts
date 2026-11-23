@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { tourBranches, tourTimeSlots } from "@/lib/tours/schema";
+
 const contactDetails = {
   email: z.string().trim().email({ message: "Please enter a valid email address." }),
   phone: z.string().trim().min(5, { message: "Phone number is required." }),
@@ -39,5 +41,10 @@ export type TourFormValues = z.infer<typeof tourSchema>;
 
 export const publicContactSchema = z.discriminatedUnion("type", [
   enquirySchema.extend({ type: z.literal("ENQUIRY") }),
-  tourSchema.extend({ type: z.literal("TOUR") }),
+  tourSchema.extend({
+    type: z.literal("TOUR"),
+    requestId: z.uuid(),
+    timeSlot: z.enum(tourTimeSlots),
+    branch: z.enum([tourBranches.BRANCH_1.formValue, tourBranches.BRANCH_2.formValue]),
+  }),
 ]);

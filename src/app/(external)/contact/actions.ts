@@ -1,6 +1,10 @@
 "use server";
 
+import { after } from "next/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
+import { processTourEmails, tourManagementEnabled } from "@/lib/tours/email-dispatch";
+import { tourBranches } from "@/lib/tours/schema";
 
 import { publicContactSchema } from "./form-schemas";
 
@@ -44,15 +48,41 @@ export async function submitContactFormAction(input: unknown) {
         ];
 
   try {
-    const { error } = await createAdminClient().rpc("submit_website_enquiry", {
-      contact_name: name,
-      contact_email: email,
-      contact_phone: data.phone,
-      enquiry_subject: subject,
-      enquiry_message: [...details, "", "Submitted via Bubbly Day Nursery public website."].join("\n"),
-    });
+    const messageBody = [...details, "", "Submitted via Bubbly Day Nursery public website."].join("\n");
+    const admin = createAdminClient();
+    const isManagedTour = data.type === "TOUR" && tourManagementEnabled();
+    const response =
+      data.type === "TOUR" && isManagedTour
+        ? await admin.rpc("submit_tour_request", {
+            contact_name: name,
+            contact_email: email,
+            contact_phone: data.phone,
+            request_key: data.requestId,
+            visit_date: data.visitDate,
+            time_slot: data.timeSlot,
+            nursery_branch: data.branch === tourBranches.BRANCH_2.formValue ? "BRANCH_2" : "BRANCH_1",
+            message_body: messageBody,
+          })
+        : await admin.rpc("submit_website_enquiry", {
+            contact_name: name,
+            contact_email: email,
+            contact_phone: data.phone,
+            enquiry_subject: subject,
+            enquiry_message: messageBody,
+          });
+    const { error } = response;
 
     if (!error) {
+      if (isManagedTour && response.data) {
+        const threadId = String(response.data);
+        after(async () => {
+          try {
+            await processTourEmails(threadId);
+          } catch {
+            console.error("Tour email processing deferred to scheduled retry");
+          }
+        });
+      }
       return { success: true };
     }
 

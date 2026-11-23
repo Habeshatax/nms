@@ -1,7 +1,12 @@
 "use server";
 
+import { after } from "next/server";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { renderTourEmail, tourEmailSnapshotSchema, type TourEmailEvent } from "@/lib/tours/email-content";
+import { processTourEmails, tourEmailMode, tourManagementEnabled } from "@/lib/tours/email-dispatch";
+import { tourUpdateSchema, type TourThread } from "@/lib/tours/schema";
 
 async function getThreadAccess(threadId: string) {
   const supabase = await createClient();
@@ -41,7 +46,7 @@ async function getThreadAccess(threadId: string) {
     }
   }
 
-  return { adminClient, userId: user.id };
+  return { adminClient, userId: user.id, isStaff };
 }
 
 export async function getThreadMessagesAction(threadId: string) {
@@ -92,7 +97,7 @@ export async function deleteThreadAction(threadId: string) {
   const { data: roleMappings } = await supabase.from("user_roles").select("roles(name)").eq("user_id", user.id);
 
   const roleNames =
-    ((roleMappings as unknown) as Array<{ roles: { name: string } | null }>)
+    (roleMappings as unknown as Array<{ roles: { name: string } | null }>)
       ?.map((rm) => rm.roles?.name)
       .filter(Boolean) || [];
   const isStaff =
@@ -130,7 +135,7 @@ export async function deleteMessageAction(messageId: string) {
   const { data: roleMappings } = await supabase.from("user_roles").select("roles(name)").eq("user_id", user.id);
 
   const roleNames =
-    ((roleMappings as unknown) as Array<{ roles: { name: string } | null }>)
+    (roleMappings as unknown as Array<{ roles: { name: string } | null }>)
       ?.map((rm) => rm.roles?.name)
       .filter(Boolean) || [];
   const isStaff =
@@ -148,4 +153,80 @@ export async function deleteMessageAction(messageId: string) {
   }
 
   return { success: true };
+}
+
+export async function updateTourAction(input: unknown) {
+  if (!tourManagementEnabled()) return { success: false as const, message: "Tour management is disabled." };
+  const parsed = tourUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false as const, message: parsed.error.issues[0]?.message ?? "Check the tour details." };
+  }
+  const data = parsed.data;
+  const { adminClient, userId, isStaff } = await getThreadAccess(data.threadId);
+  if (!isStaff) return { success: false as const, message: "Only nursery staff can manage tours." };
+
+  const { data: thread, error } = await adminClient
+    .rpc("update_tour_request", {
+      target_thread_id: data.threadId,
+      expected_revision: data.revision,
+      next_status: data.status,
+      visit_date: data.visitDate,
+      time_slot: data.timeSlot,
+      nursery_branch: data.branch,
+      actor_id: userId,
+    })
+    .single();
+  if (error) {
+    return {
+      success: false as const,
+      message: error.message.includes("TOUR_CONFLICT")
+        ? "Another staff member updated this tour. Refresh Messages to load the latest details."
+        : "The tour could not be updated. Check its details and try again.",
+    };
+  }
+  after(async () => {
+    try {
+      await processTourEmails(data.threadId);
+    } catch {
+      console.error("Tour email processing deferred to scheduled retry");
+    }
+  });
+  return { success: true as const, thread: thread as TourThread };
+}
+
+export async function getTourEmailDetailsAction(threadId: string) {
+  if (!tourManagementEnabled()) throw new Error("Tour management is disabled.");
+  const { adminClient, isStaff } = await getThreadAccess(threadId);
+  if (!isStaff) throw new Error("Only nursery staff can view booking emails.");
+  const { data, error } = await adminClient
+    .from("tour_email_outbox")
+    .select("id,recipient_kind,event,state,attempts,last_error,sent_at,created_at,snapshot")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw new Error("Booking email details are unavailable.");
+
+  return {
+    mode: tourEmailMode(),
+    items: (data ?? []).map((item) => {
+      const parsed = tourEmailSnapshotSchema.safeParse(item.snapshot);
+      const content = parsed.success
+        ? renderTourEmail(
+            parsed.data,
+            item.event as TourEmailEvent,
+            item.recipient_kind === "PARENT" ? "PARENT" : "BRANCH",
+          )
+        : { subject: "Booking email needs attention", text: "The saved tour details are incomplete." };
+      return {
+        id: String(item.id),
+        recipientKind: String(item.recipient_kind),
+        event: String(item.event),
+        state: String(item.state),
+        attempts: Number(item.attempts),
+        error: item.last_error as string | null,
+        sentAt: item.sent_at as string | null,
+        ...content,
+      };
+    }),
+  };
 }
