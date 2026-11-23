@@ -19,6 +19,7 @@ import { enquirySchema, type EnquiryFormValues, tourSchema, type TourFormValues 
 export function ContactForms() {
   const [activeForm, setActiveForm] = React.useState<"enquiry" | "tour">("enquiry");
   const [submitting, setSubmitting] = React.useState(false);
+  const tourAttempt = React.useRef<{ signature: string; id: string } | null>(null);
 
   const enquiryForm = useForm<EnquiryFormValues>({
     resolver: zodResolver(enquirySchema),
@@ -68,7 +69,13 @@ export function ContactForms() {
   const onTourSubmit = async (data: TourFormValues) => {
     setSubmitting(true);
     try {
-      const result = await submitContactFormAction({ type: "TOUR", ...data });
+      const signature = JSON.stringify(data);
+      let attempt = tourAttempt.current;
+      if (!attempt || attempt.signature !== signature) {
+        attempt = { signature, id: crypto.randomUUID() };
+        tourAttempt.current = attempt;
+      }
+      const result = await submitContactFormAction({ type: "TOUR", ...data, requestId: attempt.id });
       if (!result.success) {
         toast.error("Error booking tour", { description: result.message });
         return;
@@ -77,6 +84,7 @@ export function ContactForms() {
         description: `Your booking request for ${data.visitDate} at ${data.timeSlot} has been sent! Nursery managers will confirm via phone or message shortly.`,
       });
       tourForm.reset();
+      tourAttempt.current = null;
     } catch {
       toast.error("Error booking tour", { description: "Please try again." });
     } finally {
