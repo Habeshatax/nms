@@ -49,4 +49,16 @@ FAILED or REVIEW jobs require staff/developer investigation. This version does n
 9. Enable test mode with a test inbox and verified Resend sender. Run the worker and check that parent and both branch notifications go only to the test inbox. Verify duplicate worker calls do not duplicate provider submissions. Exercise failed sends and interrupted leases.
 10. Review mobile and dark-mode Messages screenshots and verify the public booking success/error messages. A production rollout needs a separate deployment decision after preview review.
 
-Build, browser and isolated database checks are pending. No production migration, deployment or email send was performed while preparing this branch.
+## Automated validation completed
+
+Run `npm ci` followed by `npm run test:tours` to reproduce the isolated regression suite. It uses the development-only PGlite dependency for real PostgreSQL SQL, transactions, roles and row-level security, with fictional users and bookings. It applies the existing schema/chat/guest-enquiry migrations before the new migration. The fixture omits only Supabase's realtime publication statement and provides local auth helpers. It does not require Supabase credentials or contact any external database.
+
+On 23 November 2026:
+
+- Production Webpack build and TypeScript checks passed with placeholder localhost Supabase credentials, tour management enabled and email sending disabled.
+- 17 database checks passed: legacy migration, atomic submissions and rollback, request-key deduplication, confirmation, unchanged saves, conflicting revisions, staff permissions, rescheduling and branch transfers, cancellation/completion, ordinary enquiries, outbox/RPC permissions, leases/recovery and cascade deletion.
+- 17 email/endpoint checks passed: feature flags, incomplete configuration, recipient routing and test-inbox isolation, all event templates, HTTP/network failures, immutable retry payloads and idempotency keys, expiry/review handling, invalid snapshots, lost leases, batch limits, bearer authentication and safe endpoint errors.
+
+Email tests replace the Supabase client and provider fetch with controlled local doubles. They exercise the actual TypeScript dispatcher, templates and route handler. They prove request construction and retry logic, not provider acceptance or inbox delivery. The embedded database checks exercise sequential leases; they do not simulate independent concurrent PostgreSQL connections.
+
+Remaining preview acceptance: interactive Messages testing including mobile/dark-mode screenshots, real Supabase/PostgREST integration and verified-sender delivery to a controlled test inbox. No production migration, deployment or email send was performed during these tests.
