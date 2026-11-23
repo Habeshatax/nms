@@ -1,5 +1,9 @@
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
+
+export const metadata = publicPageMetadata("/privacy");
 
 export default function PrivacyPage() {
   return (

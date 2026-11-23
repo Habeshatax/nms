@@ -1,3 +1,5 @@
+import { publicPageMetadata } from "@/lib/seo";
+
 import { Hero } from "./_components/hero";
 import { Highlights } from "./_components/highlights";
 import { NurseryFooter } from "./_components/nursery-footer";
@@ -5,6 +7,8 @@ import { NurseryHeader } from "./_components/nursery-header";
 import { NurseryShowcase } from "./_components/nursery-showcase";
 import { RoomsPreview } from "./_components/rooms-preview";
 import { Testimonials } from "./_components/testimonials";
+
+export const metadata = publicPageMetadata("/");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

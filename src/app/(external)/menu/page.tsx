@@ -2,9 +2,13 @@ import { Apple, Heart } from "lucide-react";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
+import { publicPageMetadata } from "@/lib/seo";
+
 import { NurseryFooter } from "../_components/nursery-footer";
 import { NurseryHeader } from "../_components/nursery-header";
 import { MenuWorkspace } from "./_components/menu-workspace";
+
+export const metadata = publicPageMetadata("/menu");
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
