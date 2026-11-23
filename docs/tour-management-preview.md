@@ -62,3 +62,13 @@ On 23 November 2026:
 Email tests replace the Supabase client and provider fetch with controlled local doubles. They exercise the actual TypeScript dispatcher, templates and route handler. They prove request construction and retry logic, not provider acceptance or inbox delivery. The embedded database checks exercise sequential leases; they do not simulate independent concurrent PostgreSQL connections.
 
 Remaining preview acceptance: interactive Messages testing including mobile/dark-mode screenshots, real Supabase/PostgREST integration and verified-sender delivery to a controlled test inbox. No production migration, deployment or email send was performed during these tests.
+
+## Authorised VPS release
+
+On 23 November 2026, the owner authorised pushing and deploying this change. The production tour migration was applied and verified: the booking/update RPCs and outbox exist, ordinary authenticated users cannot execute the privileged update RPC, and no historical emails were queued. Application deployment still requires running the VPS helper.
+
+The helper is `scripts/deploy-tour-upgrade.py --revision <exact-merged-commit-sha>`. Run it with Python 3 on the existing VPS. It requires the reviewed `/root/nms` source and running `nms-app`, no tracked local edits, the existing `.env`, the two existing Docker networks and the reviewed container topology. It creates protected backups, fast-forwards source to the pinned revision and builds a uniquely tagged image using Webpack. It starts a candidate without proxy hostnames and checks public pages, the worker authentication response, production project identity and read-only PostgREST schema access before stopping the old container. It preserves existing container environment, proxy labels, networks, restart policy and configured memory/CPU limits. It stops safely before switching if the topology has drifted.
+
+The helper explicitly enables tour management and disables email sending. Queued messages can be reviewed in Messages. Configuring a verified sender and testing delivery are separate remaining steps.
+
+The previous container is retained as `nms-app-before-tours-<timestamp>`. Failed activation restarts it automatically. Five offline deployment tests exercise candidate-before-switch ordering, build/schema failure, rename failure and new-container startup failure. Run these with `python3 tests/tours/deploy.py`. They simulate Docker and do not prove the VPS build or runtime. A successful VPS run prints the rollback name and backup directory.
